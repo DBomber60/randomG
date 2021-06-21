@@ -12,9 +12,7 @@ sample.new = function(theta.old, gamma.old, beta.old, sigsq.old, design, resp) {
   
   # sample new gamma 
   # assumption: independent elements, fixed nu_0, nu_1
-  
-  #pg = rep(0,p) # hold the gamma probabilities
-  
+ 
   p1 = dnorm(beta.old, sd = sqrt(nu_1)) * theta.new
   p0 = dnorm(beta.old, sd = sqrt(nu_0)) * (1-theta.new)
   gamma.new = rbinom(p, 1, prob = p1/(p1 + p0))  
