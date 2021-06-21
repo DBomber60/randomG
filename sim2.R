@@ -108,3 +108,91 @@ for(it in 2:nIter) {
   paramsY[it, 2*pY+2] = new.params$sigsq.new
 }
 
+
+# posterior predictive sampler
+
+dat$y11 = NA
+dat$y00 = NA
+dat$t1 = ifelse(dat$A1 == 1 & dat$A2 == 1, 1, 0)
+dat$t0 = ifelse(dat$A1 == 0 & dat$A2 == 0, 1, 0)
+
+# first, let's do this with the correct G
+row = 100
+ndraws = 500
+
+# important indices
+for(time in 1:t) {
+  for (covs in 1:ncov) {
+    # mean function
+    
+    # impute
+    
+    
+  }
+}
+
+diffs = array(0, dim = ndraws)
+
+for(draw in 1:ndraws) {
+  
+  if ( params[1, row + draw, 3] == 1 ) { # if there is an edge from treatment to covariate, impute
+    
+    mx1 = cbind(dat$X1, 1) %*% params[1, row + draw, c(4,5)]  # XB (treated at time 1)
+    X2draw1 = rnorm(n, mean = mx1, sd = params[1, row + draw, 6]) # fixed treatment to 1
+    X2draw1 = ifelse(dat$A1 == 1, dat$X2, X2draw1)
+    
+    
+    mx0 = cbind(dat$X1, 0) %*% params[1, row + draw, c(4,5)]  # XB (treated at time 1)
+    X2draw0 = rnorm(n, mean = mx0, sd = params[1, row + draw, 6]) # fixed treatment to 1
+    X2draw0 = ifelse(dat$A1 == 0, dat$X2, X2draw0)
+    
+    
+  } else { 
+    
+    X2draw1 = dat$X2
+    X2draw0 = dat$X2
+    
+  }
+  
+  if ( params[2, row + draw, 3] == 1 ) { # if there is an edge from treatment to covariate, impute
+    
+    mz1 = cbind(dat$Z1, 1) %*% params[2, row + draw, c(4,5)]  # XB (treated at time 1)
+    Z2draw1 = rnorm(n, mean = mz1, sd = params[2, row + draw, 6]) # fixed treatment to 1
+    Z2draw1 = ifelse(dat$A1 == 1, dat$Z2, Z2draw1)
+    
+    
+    mz0 = cbind(dat$Z1, 0) %*% params[1, row + draw, c(4,5)]  # XB (treated at time 1)
+    Z2draw0 = rnorm(n, mean = mz0, sd = params[1, row + draw, 6]) # fixed treatment to 1
+    Z2draw0 = ifelse(dat$A1 == 0, dat$Z2, Z2draw0)
+    
+    
+  } else { 
+    
+    Z2draw1 = dat$Z2
+    Z2draw0 = dat$Z2
+    
+  }
+  
+  
+  
+  
+  
+  my1 = cbind(X2draw1, Z2draw1, 1, 1) %*% paramsY[(row+draw),c(6:9)] # always treated
+  Ydraw1 = rnorm(n, mean = my1, sd = paramsY[(row+draw), 10])
+  
+  my0 = cbind(X2draw0, Z2draw0, 1, 1) %*% paramsY[(row+draw),c(6:9)] # always treated
+  Ydraw0 = rnorm(n, mean = my0, sd = paramsY[(row+draw), 10])
+  
+  
+  dat$y11 = ifelse(dat$t1 == 1, dat$Y, Ydraw1)
+  dat$y00 = ifelse(dat$t0 == 1, dat$Y, Ydraw0)
+  
+  diffs[draw] = sum(dat$y11 - dat$y00)/n
+  
+  
+}
+
+#hist(diffs)
+d.random = data.frame(diffs = diffs, g = "ran" )
+
+
