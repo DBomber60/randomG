@@ -28,7 +28,7 @@ sample.new = function(theta.old, gamma.old, beta.old, sigsq.old, design, resp) {
   # assumptions: IG(.5, .5) prior on sigsq
   ss = sum ( (resp - design %*% array(beta.new, dim=p) )^2 )
   n = length(resp)
-  sigsq.new = rgamma(1, (n+1)/2, (ss+1)/2)
+  sigsq.new = 1/rgamma(1, (n+1)/2, (ss+1)/2)
   
   
   return(list(theta.new=theta.new, 
