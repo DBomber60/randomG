@@ -36,7 +36,7 @@ X[2,,] = rmvnorm(N, rep(0, ncov), (xdiffsd^2) * s) + 0.7 * X[1,,] +
 A[,2] = rbinom(N, 1, prob = plogis( 1/3 * rowSums(X[2,,]) )  ) # 
 
 X[3,,] = rmvnorm(N, rep(0, ncov), (xdiffsd^2) * s) + 0.7 * X[2,,] + 
-  0.3 * cbind(-A[,2], 0, 0) + u # treatment has effect on only the first column 
+  0.6 * cbind(-A[,2], 0, 0) + u # treatment has effect on only the first column 
 
 A[,3] = rbinom(N, 1, prob = plogis( 1/3 * rowSums(X[3,,]) )  ) # suppose the first treatment is (unconditionally) randomized
 
@@ -49,7 +49,7 @@ Y = 0.8 * X[3,,1] + rnorm(N, sd = 0.2) + u[,1] - 0.6 * A[,3]
 ##### SAMPLER #####
 
 set.seed(1)
-nIter = 5000
+nIter = 2000
 
 nu_1 = 5
 nu_0 = 0.02
@@ -121,8 +121,8 @@ paramsY.r = paramsY[(burn+1):nIter,]
 
 
 # important index
-edge.index = 4 # index for edge indicator in posterior sample
-ndraws = 3000
+edge.index = 3 # index for edge indicator in posterior sample
+ndraws = 1000
 ypp111 = array(NA, dim = c(N, ndraws) )
 
 for (draw in 1:ndraws) {
@@ -166,6 +166,50 @@ hist(colSums(ypp111 - ypp000)/N)
 
 # 0.25: -.57 0.75: -.54
 
+### compute true effect
+
+
+# TODO
+# 1) plot with graph options
+# 2) plot of posterior
+
+
+##### TRUTH #####
+
+y111.true = array(N, dim = c(N, ndraws))
+X.pp.true = array(0, dim = c(2, N, ncov))
+
+for(i in 1:ndraws) {
+  
+  X.pp.true[1, ,] = rmvnorm(N, rep(0, ncov), (xdiffsd^2) * s) + 0.7 * X[1,,] - 
+     0.6 * cbind(rep(1,N), 0, 0) + u
+  
+  X.pp.true[2, ,] = rmvnorm(N, rep(0, ncov), (xdiffsd^2) * s) + 0.7 * X.pp.true[1,,] - 
+    0.3 * cbind(rep(1,N), 0, 0) + u
+  
+  
+  Y = 0.8 * X.pp.true[2,,1] + rnorm(N, sd = 0.2) + u[,1] - 0.6 * rep(1,N)
+  
+  y111.true[,i] = Y
+}
+
+y000.true = array(N, dim = c(N, ndraws))
+X.pp.true = array(0, dim = c(2, N, ncov))
+
+for(i in 1:ndraws) {
+  
+  X.pp.true[1, ,] = rmvnorm(N, rep(0, ncov), (xdiffsd^2) * s) + 0.7 * X[1,,] + u
+  
+  X.pp.true[2, ,] = rmvnorm(N, rep(0, ncov), (xdiffsd^2) * s) + 0.7 * X.pp.true[1,,] +  u
+  
+  Y = 0.8 * X.pp.true[2,,1] + rnorm(N, sd = 0.2) + u[,1] 
+  
+  y000.true[,i] = Y
+}
+
+j = colSums(y111.true - y000.true)/N
+quantile(j)
+hist(colSums(y111.true - y000.true)/N)
 
 
 
