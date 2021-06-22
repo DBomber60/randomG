@@ -9,7 +9,7 @@ set.seed(1)
 N = 1000 # number of subjects
 ncov = 3 # 3 covariates
 
-t = 2 # 3 time points
+t = 3 # 3 time points
 u = rnorm(N, sd = 0.5)
 s <- matrix(0.25, ncov, ncov) # sigma X
 diag(s) <- 1.0 #
@@ -21,22 +21,23 @@ u = rmvnorm(N, mean = rep(0, ncov), sigma = su)
 
 # hold time-varying covariates in multi-dimensional array
 X = array(0, dim = c(3, N, ncov)) # 2 time points
+A = matrix(0, nrow = N, ncol = t)
 
 X[1,,] = rmvnorm(N, rep(0, ncov), su)
 
-A_0 = rbinom(N, 1, prob = plogis(1/3 * rowSums(X[1,,]))) # suppose the first treatment is (unconditionally) randomized
+A[,1] = rbinom(N, 1, prob = plogis(1/3 * rowSums(X[1,,]))) # suppose the first treatment is (unconditionally) randomized
 
 X[2,,] = rmvnorm(N, rep(0, ncov), (xdiffsd^2) * s) + 0.7 * X[1,,] + 
-  0.6 * cbind(-A_0, 0, 0) + u # treatment has effect on only the first column 
+  0.6 * cbind(-A[,1], 0, 0) + u # treatment has effect on only the first column 
 
-A_1 = rbinom(N, 1, prob = plogis( 1/3 * rowSums(X[2,,]) )  ) # suppose the first treatment is (unconditionally) randomized
+A[,2] = rbinom(N, 1, prob = plogis( 1/3 * rowSums(X[2,,]) )  ) # suppose the first treatment is (unconditionally) randomized
 
 X[3,,] = rmvnorm(N, rep(0, ncov), (xdiffsd^2) * s) + 0.7 * X[2,,] + 
-  0.6 * cbind(-A_0, 0, 0) + u # treatment has effect on only the first column 
+  0.6 * cbind(-A[,2], 0, 0) + u # treatment has effect on only the first column 
 
-A_2 = rbinom(N, 1, prob = plogis( 1/3 * rowSums(X[3,,]) )  ) # suppose the first treatment is (unconditionally) randomized
+A[,3] = rbinom(N, 1, prob = plogis( 1/3 * rowSums(X[3,,]) )  ) # suppose the first treatment is (unconditionally) randomized
 
-Y = 0.8 * X[3,,1] + rnorm(N, sd = 0.2) + u[,1] - 0.6 * A_2
+Y = 0.8 * X[3,,1] + rnorm(N, sd = 0.2) + u[,1] - 0.6 * A[,3]
 #X_2 = rmvnorm(ntot, rep(0, ncov), (xdiffsd^2) * s) + 0.8 * X_1 + 0.6 * cbind(-A_0, 0, 0) + u
 
 # for each covariate, model the inclusion
@@ -50,31 +51,19 @@ nIter = 1000
 nu_1 = 5
 nu_0 = 0.02
 
-c = 10
-inters = function(c) sqrt(2 * log(c) * c^2/(c^2-1))
-inters(c) * sqrt(nu_0)
-
-c^2 * nu_0
-
-dnorm(0.31, sd = sqrt(nu_0))
-dnorm(0.31, sd = sqrt(nu_0 * c ^2))
-
-
-
 p = 3 # covariate model design matrix dimension
 pY = 5 # outcome model design matrix dimension
 
-# array of parameters for each intermediate variable
+# array of parameter samples for each intermediate variable
 # theta (1)/ gamma (p)/ beta (p)/ sigsq (1)
-
-params = array(.1, dim = c(t, ncov, nIter, 2 * p + 2) ) # intermediate variables
+params = array(.1, dim = c(t-1, ncov, nIter, 2 * p + 2) ) # intermediate variables
 paramsY = array(.1, dim = c(nIter, 2 * pY + 2))
 
 
 for(it in 2:nIter) {
   
   
-  for (time in 1:t) { # for each time point (where we model the intermediate covariates)
+  for (time in 1:(t-1)) { # for each time point (where we model the intermediate covariates)
 
     
     for (cv in 1:ncov) { # for each covariate
@@ -82,7 +71,7 @@ for(it in 2:nIter) {
                             gamma.old = params[time, cv, it-1, 2:(p+1)],
                             beta.old = params[time, cv, it-1, (p+2):(2*p+1)],
                             sigsq.old = params[time, cv, it-1, 2*p+2],
-                            design = cbind(1, A_0, X[time, , cv]),
+                            design = cbind(1, A[,time], X[time, , cv]),
                             resp = X[time + 1, , cv])
       
       params[time, cv, it, 1] = new.params$theta.new
@@ -99,7 +88,7 @@ for(it in 2:nIter) {
                           gamma.old = paramsY[it-1, 2:(pY+1)],
                           beta.old = paramsY[it-1, (pY+2):(2*pY+1)],
                           sigsq.old = paramsY[it-1, 2*pY+2],
-                          design = cbind(1, X[2,,], A_1),
+                          design = cbind(1, X[3,,], A[,3]),
                           resp = Y)
   
   paramsY[it, 1] = new.params$theta.new
@@ -120,16 +109,33 @@ dat$t0 = ifelse(dat$A1 == 0 & dat$A2 == 0, 1, 0)
 row = 100
 ndraws = 500
 
-# important indices
-for(time in 1:t) {
-  for (covs in 1:ncov) {
-    # mean function
-    
-    # impute
-    
-    
+# important indices. params array [time, covariate, row, column]
+betas = 5:7 # beta indices for covariate models
+sigsq = 8 # sigsq indices for covariate model
+# design = cbind(1, A[,time], X[time, , cv]) # COVARIATE MODELS
+# design = cbind(1, X[3,,], A[,3]) # OUTCOME MODEL
+
+burn = 100
+params.r = params[,,(burn+1):nIter,] # remove 100 rows for burn-in
+paramsY.r = paramsY[(burn+1):nIter,]
+X.pp = array(0, dim = c(t-1, N, ncov))
+ndraws = 10
+
+ypp = array(NA, dim = c(N, ndraws) )
+
+for (draw in 1:ndraws) {
+  for(time in 1:(t-1)) {
+    for (covs in 1:ncov) {
+      # mean function
+      mu_hat = cbind(1, A[,time], X[time,,covs]) %*% params.r[time, covs, iter, betas]
+      X.pp[time, ,covs] = rnorm(N, mean = mu_hat, sd = sqrt(params.r[time, covs, iter, sigsq]) )
+    }
   }
+  mu_hat.y = cbind(1, X.pp[2,,], A[,3]) %*% paramsY[iter + burn, 7:11]
+  ypp[,draw] = rnorm(N, mean = mu_hat.y, sd = sqrt(paramsY[iter + burn, 12]))
 }
+
+cor(ypp[,2], Y)
 
 diffs = array(0, dim = ndraws)
 
