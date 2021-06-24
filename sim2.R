@@ -50,8 +50,26 @@ nu_0 = 0.02
 
 p = 3 # covariate model design matrix dimension (intercept/ last measurement/ last treatment)
 pY = ncov + 2 # outcome model design matrix dimension: all covariates plus treatment/ intercept
+nIter = 1000
+samples = gf.mcmc(A, X, Y, p, pY, nu_0, nu_1, nIter)
 
-samples = gf.mcmc(A, X, Y, p, pY, nu_0, nu_1, nIter = 1000)
+# go from samples to P(G|D)
+p = 2 # forget about intercept
+edgesX = array(NA, dim = c(t-1, nIter, ncov * p ))
+# 1) gather the gammas and label them
+
+
+for(time in 1:(t-1)) {
+  for(c in 1:ncov) {
+      edgesX[time, ,((c-1)*p+1): ((c-1)*p+p)] = samples$params[time, c, , 3:4]
+  }
+}
+
+tester = data.frame( cbind( edgesX[1,,], edgesX[2,,]  ) )
+
+j = tester %>% group_by_all() %>% summarise(n = n()) %>% arrange(desc(n))
+
+# function to compute FP/ FN based on this
 
 ##### posterior predictive sampler #####
 
