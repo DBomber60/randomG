@@ -51,13 +51,20 @@ nu_0 = 0.02
 p = 3 # covariate model design matrix dimension (intercept/ last measurement/ last treatment)
 pY = ncov + 2 # outcome model design matrix dimension: all covariates plus treatment/ intercept
 nIter = 1000
-samples = gf.mcmc(A, X, Y, p, pY, nu_0, nu_1, nIter)
 
-# go from samples to P(G|D)
+
+# sensitivity to nu+0
+nu_0 = c(.001, .02, .05)
+plotdf = array(0, dim = c(length(nu_0), 3))
+
+for (m in 1:length(nu_0)) {
+
+samples = gf.mcmc(A, X, Y, p, pY, nu_0[m], nu_1, nIter)
+
+# look at graph characteristics
 p = 2 # forget about intercept
 edgesX = array(NA, dim = c(t-1, nIter, ncov * p ))
-# 1) gather the gammas and label them
-
+# gather the gammas and label them
 
 for(time in 1:(t-1)) {
   for(c in 1:ncov) {
@@ -65,10 +72,19 @@ for(time in 1:(t-1)) {
   }
 }
 
+truev = rep( c(1,1, rep( c(0,1), 5)), 2)
 tester = data.frame( cbind( edgesX[1,,], edgesX[2,,]  ) )
+j = tester %>% group_by_all() %>% summarise(n = n()) %>% arrange(desc(n)) %>% ungroup() %>% mutate(prop = n/sum(n))
 
-j = tester %>% group_by_all() %>% summarise(n = n()) %>% arrange(desc(n))
+fp = apply(j[,-c(25,26)], 1, function(x) x %*% (x - truev) ) # FALSE POSITIVES
+fn = apply(j[,-c(25,26)], 1, function(x) truev %*% (truev - x) ) # FALSE NEGATIVES
 
+wp = as.numeric( fp %*% j$prop )
+wn = as.numeric( fn %*% j$prop )
+
+plotdf[m,] = c(nu_0[m], wp, wn)
+
+}
 # function to compute FP/ FN based on this
 
 ##### posterior predictive sampler #####

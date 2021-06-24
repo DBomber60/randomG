@@ -10,8 +10,10 @@ nIter = 2000
 
 gf.mcmc = function(A, X, Y, p, pY, nu_0, nu_1, nIter) {
   
+  p = 3
   ncov = dim(X)[3] # number of intermediate covariates
   t = dim(A)[2] # number of time points
+  pY = ncov + 2
   
   # parameter arrays (assumes normal models)
   params = array(.1, dim = c(t-1, ncov, nIter, 2 * p + 2) ) # intermediate variables parameters
@@ -46,7 +48,7 @@ gf.mcmc = function(A, X, Y, p, pY, nu_0, nu_1, nIter) {
                                 beta.old = params[time, cv, it-1, (p+2):(2*p+1)],
                                 sigsq.old = params[time, cv, it-1, 2*p+2],
                                 design = cbind(1, A[,time], X[time, , cv]),
-                                resp = X[time + 1, , cv])
+                                resp = X[time + 1, , cv], nu_0 = nu_0, nu_1 = nu_1)
         
         params[time, cv, it, 1] = new.params$theta.new
         params[time, cv, it, 2:(p+1)] = new.params$gamma.new
@@ -62,12 +64,13 @@ gf.mcmc = function(A, X, Y, p, pY, nu_0, nu_1, nIter) {
                             beta.old = paramsY[it-1, (pY+2):(2*pY+1)],
                             sigsq.old = paramsY[it-1, 2*pY+2],
                             design = cbind(1, X[3,,], A[,3]),
-                            resp = Y)
+                            resp = Y, nu_0 = nu_0, nu_1 = nu_1)
     
     paramsY[it, 1] = new.params$theta.new
     paramsY[it, 2:(pY+1)] = new.params$gamma.new
     paramsY[it, (pY+2):(2*pY+1)] = new.params$beta.new
     paramsY[it, 2*pY+2] = new.params$sigsq.new
   }
+  
   return(list(params = params, paramsY = paramsY))
 }

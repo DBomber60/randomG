@@ -2,7 +2,7 @@
 # input: old parameter values (theta, gamma, beta, sigsq), data (design, response)
 # output: list of new sampled values for each parameter
 
-sample.new = function(theta.old, gamma.old, beta.old, sigsq.old, design, resp) {
+sample.new = function(theta.old, gamma.old, beta.old, sigsq.old, design, resp, nu_0, nu_1) {
   
   p = ncol(design)
   # sample new theta
