@@ -33,19 +33,19 @@ X[1,,] = rmvnorm(N, rep(0, ncov), sigma = su)
 A[,1] = rbinom(N, 1, prob = plogis(1/3 * rowSums(X[1,,]))) # 
 
 X[2,,] = rmvnorm(N, rep(0, ncov), (xdiffsd^2) * s) + 0.7 * X[1,,] + 
-  - 0.6 * cbind(A[,1], 0, 0, 0, 0, 0) + u     
+  - 0.1 * cbind(A[,1], 0, 0, 0, 0, 0) + u     
 
 A[,2] = rbinom(N, 1, prob = plogis( 1/3 * rowSums(X[2,,]) )  ) # 
 
 X[3,,] = rmvnorm(N, rep(0, ncov), (xdiffsd^2) * s) + 0.7 * X[2,,] + 
-  - 0.6 * cbind(A[,2], 0, 0, 0, 0, 0) + u # treatment has effect on only the first column 
+  - 0.1 * cbind(A[,2], 0, 0, 0, 0, 0) + u # treatment has effect on only the first column 
 
 A[,3] = rbinom(N, 1, prob = plogis( 1/3 * rowSums(X[3,,]) )  ) # suppose the first treatment is (unconditionally) randomized
 
-Y = 0.8 * X[3,,1] + rnorm(N, sd = 0.2) + u[,1] - 0.6 * A[,3]
+Y = 0.8 * X[3,,1] + rnorm(N, sd = 0.2) + u[,1] - 0.1 * A[,3]
 
 ### sample posterior parameter values
-nu_1 = 2
+nu_1 = 5
 nu_0 = 0.02
 
 p = 3 # covariate model design matrix dimension (intercept/ last measurement/ last treatment)
@@ -54,7 +54,7 @@ nIter = 1000
 
 
 # sensitivity to nu+0
-nu_0 = c(.001, .02, .05)
+nu_0 = c(.001, .02, .05, .1, .2)
 plotdf = array(0, dim = c(length(nu_0), 3))
 
 for (m in 1:length(nu_0)) {
