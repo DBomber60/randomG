@@ -9,8 +9,6 @@ set.seed(1)
 # compute the true effect
 # let's do 6 covariates and have treatment effect go through two 
 
-
-
 ##### SIMULATE DATA #####
 N = 1000 # number of subjects
 ncov = 6 # 3 covariates
@@ -33,16 +31,16 @@ X[1,,] = rmvnorm(N, rep(0, ncov), sigma = su)
 A[,1] = rbinom(N, 1, prob = plogis(1/3 * rowSums(X[1,,]))) # 
 
 X[2,,] = rmvnorm(N, rep(0, ncov), (xdiffsd^2) * s) + 0.7 * X[1,,] + 
-  - 0.1 * cbind(A[,1], 0, 0, 0, 0, 0) + u     
+  - 0.6 * cbind(A[,1], 0, 0, 0, 0, 0) + u     
 
 A[,2] = rbinom(N, 1, prob = plogis( 1/3 * rowSums(X[2,,]) )  ) # 
 
 X[3,,] = rmvnorm(N, rep(0, ncov), (xdiffsd^2) * s) + 0.7 * X[2,,] + 
-  - 0.1 * cbind(A[,2], 0, 0, 0, 0, 0) + u # treatment has effect on only the first column 
+  - 0.6 * cbind(A[,2], 0, 0, 0, 0, 0) + u # treatment has effect on only the first column 
 
 A[,3] = rbinom(N, 1, prob = plogis( 1/3 * rowSums(X[3,,]) )  ) # suppose the first treatment is (unconditionally) randomized
 
-Y = 0.8 * X[3,,1] + rnorm(N, sd = 0.2) + u[,1] - 0.1 * A[,3]
+Y = 0.8 * X[3,,1] + rnorm(N, sd = 0.2) + u[,1] - 0.6 * A[,3]
 
 ### sample posterior parameter values
 nu_1 = 5
@@ -52,10 +50,11 @@ p = 3 # covariate model design matrix dimension (intercept/ last measurement/ la
 pY = ncov + 2 # outcome model design matrix dimension: all covariates plus treatment/ intercept
 nIter = 1000
 
+# check same thing for Y !
 
 # sensitivity to nu+0
-nu_0 = c(.001, .02, .05, .1, .2)
-plotdf = array(0, dim = c(length(nu_0), 3))
+nu_0 = c(.00001, .02, .05, .1, .2)
+plotdf = array(0, dim = c(length(nu_0), 6))
 
 for (m in 1:length(nu_0)) {
 
@@ -82,10 +81,30 @@ fn = apply(j[,-c(25,26)], 1, function(x) truev %*% (truev - x) ) # FALSE NEGATIV
 wp = as.numeric( fp %*% j$prop )
 wn = as.numeric( fn %*% j$prop )
 
-plotdf[m,] = c(nu_0[m], wp, wn)
+entropy = sum(log(j$prop) * j$prop)
+
+# same thing for Y
+truev.Y = c(1,0,0,0,0,0,1)
+
+testerY = data.frame(samples$paramsY[,3:9]) %>% group_by_all() %>% 
+  summarise(n = n()) %>% arrange(desc(n)) %>% ungroup() %>% mutate(prop = n/sum(n))
+
+fpY = apply(testerY[,-c(8,9)], 1, function(x) x %*% (x - truev.Y) ) # FALSE POSITIVES
+fnY = apply(testerY[,-c(8,9)], 1, function(x) truev.Y %*% (truev.Y - x) ) # FALSE NEGATIVES
+
+wpY = as.numeric( fpY %*% testerY$prop )
+wnY = as.numeric( fnY %*% testerY$prop )
+
+entropy = sum(log(j$prop) * j$prop)
+
+
+plotdf[m,] = c(nu_0[m], wp, wn, entropy, wpY, wnY)
 
 }
-# function to compute FP/ FN based on this
+
+
+
+
 
 ##### posterior predictive sampler #####
 
