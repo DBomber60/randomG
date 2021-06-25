@@ -11,7 +11,7 @@ set.seed(1)
 
 ##### SIMULATE DATA #####
 N = 1000 # number of subjects
-ncov = 6 # 3 covariates
+ncov = 10 # 3 covariates
 
 t = 3 # 3 treatment time points
 s <- matrix(0.25, ncov, ncov) # sigma X
@@ -31,12 +31,12 @@ X[1,,] = rmvnorm(N, rep(0, ncov), sigma = su)
 A[,1] = rbinom(N, 1, prob = plogis(1/3 * rowSums(X[1,,]))) # 
 
 X[2,,] = rmvnorm(N, rep(0, ncov), (xdiffsd^2) * s) + 0.7 * X[1,,] + 
-  - 0.6 * cbind(A[,1], 0, 0, 0, 0, 0) + u     
+  - 0.6 * cbind(A[,1], 0, 0, 0, 0, 0,0,0,0,0) + u     
 
 A[,2] = rbinom(N, 1, prob = plogis( 1/3 * rowSums(X[2,,]) )  ) # 
 
 X[3,,] = rmvnorm(N, rep(0, ncov), (xdiffsd^2) * s) + 0.7 * X[2,,] + 
-  - 0.6 * cbind(A[,2], 0, 0, 0, 0, 0) + u # treatment has effect on only the first column 
+  - 0.6 * cbind(A[,2], 0, 0, 0, 0, 0,0,0,0,0) + u # treatment has effect on only the first column 
 
 A[,3] = rbinom(N, 1, prob = plogis( 1/3 * rowSums(X[3,,]) )  ) # suppose the first treatment is (unconditionally) randomized
 
@@ -53,8 +53,8 @@ nIter = 1000
 # check same thing for Y !
 
 # sensitivity to nu+0
-nu_0 = c(.00001, .02, .05, .1, .2)
-plotdf = array(0, dim = c(length(nu_0), 6))
+nu_0 = c(.00001, .0001, .001, .01, .1)
+plotdf = array(0, dim = c(length(nu_0), 7))
 
 for (m in 1:length(nu_0)) {
 
@@ -71,12 +71,12 @@ for(time in 1:(t-1)) {
   }
 }
 
-truev = rep( c(1,1, rep( c(0,1), 5)), 2)
+truev = rep( c(1,1, rep( c(0,1), (ncov-1)) ) , 2)
 tester = data.frame( cbind( edgesX[1,,], edgesX[2,,]  ) )
 j = tester %>% group_by_all() %>% summarise(n = n()) %>% arrange(desc(n)) %>% ungroup() %>% mutate(prop = n/sum(n))
 
-fp = apply(j[,-c(25,26)], 1, function(x) x %*% (x - truev) ) # FALSE POSITIVES
-fn = apply(j[,-c(25,26)], 1, function(x) truev %*% (truev - x) ) # FALSE NEGATIVES
+fp = apply(j[,-c(41,42)], 1, function(x) x %*% (x - truev) ) # FALSE POSITIVES
+fn = apply(j[,-c(41,42)], 1, function(x) truev %*% (truev - x) ) # FALSE NEGATIVES
 
 wp = as.numeric( fp %*% j$prop )
 wn = as.numeric( fn %*% j$prop )
@@ -84,21 +84,22 @@ wn = as.numeric( fn %*% j$prop )
 entropy = sum(log(j$prop) * j$prop)
 
 # same thing for Y
-truev.Y = c(1,0,0,0,0,0,1)
+truev.Y = c(1,rep(0,ncov-1) ,1)
 
-testerY = data.frame(samples$paramsY[,3:9]) %>% group_by_all() %>% 
+testerY = data.frame(samples$paramsY[,(3:(pY+1))]) %>% group_by_all() %>% 
   summarise(n = n()) %>% arrange(desc(n)) %>% ungroup() %>% mutate(prop = n/sum(n))
 
-fpY = apply(testerY[,-c(8,9)], 1, function(x) x %*% (x - truev.Y) ) # FALSE POSITIVES
-fnY = apply(testerY[,-c(8,9)], 1, function(x) truev.Y %*% (truev.Y - x) ) # FALSE NEGATIVES
+fpY = apply(testerY[,-c(12,13)], 1, function(x) x %*% (x - truev.Y) ) # FALSE POSITIVES
+fnY = apply(testerY[,-c(12,13)], 1, function(x) truev.Y %*% (truev.Y - x) ) # FALSE NEGATIVES
 
 wpY = as.numeric( fpY %*% testerY$prop )
 wnY = as.numeric( fnY %*% testerY$prop )
 
 entropy = sum(log(j$prop) * j$prop)
+eY = sum(log(testerY$prop) * testerY$prop)
 
 
-plotdf[m,] = c(nu_0[m], wp, wn, entropy, wpY, wnY)
+plotdf[m,] = c(nu_0[m], wp, wn, entropy, wpY, wnY, eY)
 
 }
 
