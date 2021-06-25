@@ -1,5 +1,7 @@
 library(mvtnorm)
 library(tidyverse)
+library(latex2exp)
+library(gridExtra)
 source('sample.N.R')
 source('mcmc.R')
 set.seed(1)
@@ -103,7 +105,32 @@ plotdf[m,] = c(nu_0[m], wp, wn, entropy, wpY, wnY, eY)
 
 }
 
+plotdf = data.frame(plotdf)
+names(plotdf) = c('nu_0', 'fpx', 'fnx', 'etropyx', 'fpy','fny','ey')
 
+# first plot: fp and fn edges
+plot1 = plotdf %>% select(nu_0, fpx, fnx, fpy, fny) %>% pivot_longer(!nu_0)
+p1 = ggplot(plot1, aes(x=log(nu_0), y = value, group = name)) + geom_line(aes(color=name, linetype = name)) +
+  scale_color_manual(values=c("cornflowerblue", "red", "cornflowerblue", "red")) + 
+  scale_linetype_manual(values=c("dashed", "dashed", "solid", "solid")) + 
+  geom_point(aes(color=name)) + theme_minimal(base_size = 15) + xlab(TeX('log$(\\nu_0)$')) + ylab("Value") + 
+   ggtitle(TeX("Graph Characteristics Across $\\nu_0$: Edges") ) + theme(legend.position = "none")
+
+# red is y
+# second plot: entropy characteristics
+
+plot2 = plotdf %>% select(nu_0, etropyx, ey) %>% pivot_longer(!nu_0)
+plot2$value = -plot2$value
+p2 = ggplot(plot2, aes(x=log(nu_0), y = value, group = name)) + geom_line(aes(color=name, linetype = name)) +
+  scale_color_manual(values=c("cornflowerblue", "red", "cornflowerblue", "red")) + 
+  scale_linetype_manual(values=c( "solid", "solid")) + 
+  geom_point(aes(color=name)) + theme_minimal(base_size = 15) + xlab(TeX('log$(\\nu_0)$')) + ylab("Value") + 
+  ggtitle(TeX("Graph Characteristics Across $\\nu_0$: Entropy") ) + theme(legend.position = "none")
+
+
+
+g <- arrangeGrob(p1, p2, nrow=1) #generates g
+ggsave(file="w.pdf", g, width = 10, height = 5) #saves g
 
 
 
